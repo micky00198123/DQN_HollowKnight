@@ -4,6 +4,7 @@ import collections
 import cv2
 import win32gui, win32ui, win32con, win32api
 import numpy as np
+import tensorflow as tf
 
 class FrameBuffer(threading.Thread):
   def __init__(self, threadID, name, width,height,  maxlen=5):
@@ -42,7 +43,7 @@ class FrameBuffer(threading.Thread):
   def get_frame(self):
     self.lock.acquire(blocking=True)
     station = cv2.resize(cv2.cvtColor(self.grab_screen(), cv2.COLOR_RGBA2RGB),(self.WIDTH,self.HEIGHT))
-    self.buffer.append(station)
+    self.buffer.append(tf.convert_to_tensor(station))
     self.lock.release()
 
   def get_buffer(self):

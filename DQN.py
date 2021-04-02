@@ -5,9 +5,7 @@ class DQN:
         self.model = model
         self.act_dim = model.act_dim
         self.act_model = model.act_model
-        self.act_target_model = model.act_target_model
         self.move_model = model.move_model
-        self.move_target_model = model.move_target_model
         self.gamma = gamma
         self.lr = learnging_rate
         # --------------------------训练模型--------------------------- # 
@@ -56,27 +54,38 @@ class DQN:
         #     self.act_replace_target()
 
         # 从target_model中获取 max Q' 的值，用于计算target_Q
-        next_pred_value = self.act_target_model.predict(next_obs)        
-        best_v = tf.reduce_max(next_pred_value,axis=1)
-        terminal = tf.cast(terminal,dtype=tf.float32)
-        target = reward + self.gamma * best_v
 
-        self.act_train_model(action,obs,target,epochs=1)
+
+        self.act_train_model(action,obs,reward,epochs=1)
         self.act_global_step += 1
         # print('finish')
     def act_replace_target(self):
         '''预测模型权重更新到target模型权重'''
-    
-        self.act_target_model.get_layer(name='d1').set_weights(self.act_model.get_layer(name='d1').get_weights())
+        for i, l in enumerate(self.act_target_model.get_layer(index=1).get_layer(index=0).get_layer(index=0).get_layers()):
+            l.set_weights(self.act_model.get_layer(index=1).get_layer(index=0).get_layer(index=0).get_layer(index=i).get_weights())
+        for i, l in enumerate(self.act_target_model.get_layer(index=1).get_layer(index=0).get_layer(index=1).get_layers()):
+            l.set_weights(self.act_model.get_layer(index=1).get_layer(index=0).get_layer(index=1).get_layer(index=i).get_weights())
+
+        # for i, l in enumerate(self.act_target_model.get_layer(index=1).get_layer(index=1).get_layer(index=0).get_layers()):
+        #     l.set_weights(self.act_model.get_layer(index=1).get_layer(index=1).get_layer(index=0).get_layer(index=i).get_weights())
+        # for i, l in enumerate(self.act_target_model.get_layer(index=1).get_layer(index=1).get_layer(index=1).get_layers()):
+        #     l.set_weights(self.act_model.get_layer(index=1).get_layer(index=1).get_layer(index=1).get_layer(index=i).get_weights())
+
+        # for i, l in enumerate(self.act_target_model.get_layer(index=1).get_layer(index=2).get_layer(index=0).get_layers()):
+        #     l.set_weights(self.act_model.get_layer(index=1).get_layer(index=2).get_layer(index=0).get_layer(index=i).get_weights())
+        # for i, l in enumerate(self.act_target_model.get_layer(index=1).get_layer(index=2).get_layer(index=1).get_layers()):
+        #     l.set_weights(self.act_model.get_layer(index=1).get_layer(index=2).get_layer(index=1).get_layer(index=i).get_weights())
+
+        self.act_target_model.get_layer(index=1).get_layer(index=2).set_weights(self.act_model.get_layer(index=1).get_layer(index=2).get_weights())
+
+        
+        # self.act_target_model.get_layer(index=1).get_layer(index=6).set_weights(self.act_model.get_layer(index=1).get_layer(index=6).get_weights())
+
+
 
 
     # train functions for move_model
-    def move_plot_loss(self):
-        import matplotlib.pyplot as plt
-        plt.plot(np.array(range(len(self.model.move_loss)), self.model.move_loss))
-        plt.ylabel("Loss")
-        plt.xlabel('training steps')
-        plt.show()
+
     def move_predict(self, obs):
         """ 使用self.move_model的value网络来获取 [Q(s,a1),Q(s,a2),...]
         """
@@ -106,53 +115,54 @@ class DQN:
     def move_learn(self,obs,action,reward,next_obs,terminal):
         """ 使用DQN算法更新self.move_model的value网络
         """
-
-        # 每隔200个training steps同步一次model和target_model的参数
-        # if self.move_global_step % self.update_target_steps == 0:
-        #     self.move_replace_target()
-
-
-        # 从target_model中获取 max Q' 的值，用于计算target_Q
-        next_pred_value = self.move_target_model.predict(next_obs)        
-        best_v = tf.reduce_max(next_pred_value,axis=1)
-        terminal = tf.cast(terminal,dtype=tf.float32)
-        target = reward + self.gamma * best_v
-
-        self.move_train_model(action,obs,target,epochs=1)
+        self.move_train_model(action,obs,reward,epochs=1)
         self.move_global_step += 1
-        # print('finish')
+
     def move_replace_target(self):
         '''预测模型权重更新到target模型权重'''
         
         
-        self.move_target_model.get_layer(name='d1').set_weights(self.move_model.get_layer(name='d1').get_weights())
+        for i, l in enumerate(self.move_target_model.get_layer(index=1).get_layer(index=0).get_layer(index=0).get_layers()):
+            l.set_weights(self.move_model.get_layer(index=1).get_layer(index=0).get_layer(index=0).get_layer(index=i).get_weights())
+        for i, l in enumerate(self.move_target_model.get_layer(index=1).get_layer(index=0).get_layer(index=1).get_layers()):
+            l.set_weights(self.move_model.get_layer(index=1).get_layer(index=0).get_layer(index=1).get_layer(index=i).get_weights())
+
+        # for i, l in enumerate(self.move_target_model.get_layer(index=1).get_layer(index=1).get_layer(index=0).get_layers()):
+        #     l.set_weights(self.move_model.get_layer(index=1).get_layer(index=1).get_layer(index=0).get_layer(index=i).get_weights())
+        # for i, l in enumerate(self.move_target_model.get_layer(index=1).get_layer(index=1).get_layer(index=1).get_layers()):
+        #     l.set_weights(self.move_model.get_layer(index=1).get_layer(index=1).get_layer(index=1).get_layer(index=i).get_weights())
+
+        # for i, l in enumerate(self.move_target_model.get_layer(index=1).get_layer(index=2).get_layer(index=0).get_layers()):
+        #     l.set_weights(self.move_model.get_layer(index=1).get_layer(index=2).get_layer(index=0).get_layer(index=i).get_weights())
+        # for i, l in enumerate(self.move_target_model.get_layer(index=1).get_layer(index=2).get_layer(index=1).get_layers()):
+        #     l.set_weights(self.move_model.get_layer(index=1).get_layer(index=2).get_layer(index=1).get_layer(index=i).get_weights())
+
+        self.move_target_model.get_layer(index=1).get_layer(index=2).set_weights(self.move_model.get_layer(index=1).get_layer(index=2).get_weights())
+
+        
+        # self.move_target_model.get_layer(index=1).get_layer(index=6).set_weights(self.move_model.get_layer(index=1).get_layer(index=6).get_weights())
 
 
 
     def replace_target(self):
         # print("replace target")
+
+        # copy conv3d_1
         self.model.shared_target_model.get_layer(index=0).set_weights(self.model.shared_model.get_layer(index=0).get_weights())
+        # copy batchnormalization_1
         self.model.shared_target_model.get_layer(index=1).set_weights(self.model.shared_model.get_layer(index=1).get_weights())
         
+        # copy shard_resnet block
         for i, l in enumerate(self.model.shared_target_model.get_layer(index=4).get_layer(index=0).get_layers()):
             l.set_weights(self.model.shared_model.get_layer(index=4).get_layer(index=0).get_layer(index=i).get_weights())
         for i, l in enumerate(self.model.shared_target_model.get_layer(index=4).get_layer(index=1).get_layers()):
             l.set_weights(self.model.shared_model.get_layer(index=4).get_layer(index=1).get_layer(index=i).get_weights())
-        
+
         for i, l in enumerate(self.model.shared_target_model.get_layer(index=5).get_layer(index=0).get_layers()):
             l.set_weights(self.model.shared_model.get_layer(index=5).get_layer(index=0).get_layer(index=i).get_weights())
         for i, l in enumerate(self.model.shared_target_model.get_layer(index=5).get_layer(index=1).get_layers()):
             l.set_weights(self.model.shared_model.get_layer(index=5).get_layer(index=1).get_layer(index=i).get_weights())
 
-        for i, l in enumerate(self.model.shared_target_model.get_layer(index=6).get_layer(index=0).get_layers()):
-            l.set_weights(self.model.shared_model.get_layer(index=6).get_layer(index=0).get_layer(index=i).get_weights())
-        for i, l in enumerate(self.model.shared_target_model.get_layer(index=6).get_layer(index=1).get_layers()):
-            l.set_weights(self.model.shared_model.get_layer(index=6).get_layer(index=1).get_layer(index=i).get_weights())
-
-        for i, l in enumerate(self.model.shared_target_model.get_layer(index=7).get_layer(index=0).get_layers()):
-            l.set_weights(self.model.shared_model.get_layer(index=7).get_layer(index=0).get_layer(index=i).get_weights())
-        for i, l in enumerate(self.model.shared_target_model.get_layer(index=7).get_layer(index=1).get_layers()):
-            l.set_weights(self.model.shared_model.get_layer(index=7).get_layer(index=1).get_layer(index=i).get_weights())
 
 
         self.move_replace_target()

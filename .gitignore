@@ -10,6 +10,8 @@
 ./__pycache__
 /test_img/
 /OLD_FILE/
+/ce_ptr/
+/CE/
 *.png
 *.jpg
 *.h5

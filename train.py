@@ -19,7 +19,7 @@ import Tool.Actions
 from Tool.Helper import mean, is_end
 from Tool.Actions import take_action, restart,take_direction, TackAction
 from Tool.WindowsAPI import grab_screen
-from Tool.GetHP import boss_hp, player_hp
+from Tool.GetHP import Hp_getter
 from Tool.UserInput import User
 from Tool.FrameBuffer import FrameBuffer
 
@@ -28,17 +28,17 @@ station_size = (230, 230, 1670, 930)
 
 HP_WIDTH = 768
 HP_HEIGHT = 407
-WIDTH = 200
-HEIGHT = 100
+WIDTH = 400
+HEIGHT = 200
 ACTION_DIM = 9
 FRAMEBUFFERSIZE = 4
 INPUT_SHAPE = (FRAMEBUFFERSIZE, HEIGHT, WIDTH, 3)
 
 LEARN_FREQ = 30  # 训练频率，不需要每一个step都learn，攒一些新增经验后再learn，提高效率
 MEMORY_SIZE = 200  # replay memory的大小，越大越占用内存
-MEMORY_WARMUP_SIZE = 64  # replay_memory 里需要预存一些经验数据，再从里面sample一个batch的经验让agent去learn
-BATCH_SIZE = 64  # 每次给agent learn的数据数量，从replay memory随机里sample一批数据出来
-LEARNING_RATE = 0.0001  # 学习率
+MEMORY_WARMUP_SIZE = 12  # replay_memory 里需要预存一些经验数据，再从里面sample一个batch的经验让agent去learn
+BATCH_SIZE = 8  # 每次给agent learn的数据数量，从replay memory随机里sample一批数据出来
+LEARNING_RATE = 0.00001  # 学习率
 GAMMA = 0.99  # reward 的衰减因子，一般取 0.9 到 0.999 不等
 
 action_name = ["Attack", "Attack_Down", "Attack_Up",
@@ -47,15 +47,16 @@ action_name = ["Attack", "Attack_Down", "Attack_Up",
 
 move_name = ["Move_Left", "Move_Right", "Turn_Left", "Turn_Right"]
 
-DELEY_REWARD = 3
+DELEY_REWARD = 2
 
 
 
 
-def run_episode(algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
+def run_episode(hp, algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
     restart()
     
-    for i in range(1):
+    # learn while load game
+    for i in range(3):
         if (len(move_rmp) > MEMORY_WARMUP_SIZE):
             # print("move learning")
             batch_station,batch_actions,batch_reward,batch_next_station,batch_done = move_rmp.sample(BATCH_SIZE)
@@ -67,25 +68,16 @@ def run_episode(algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
             algorithm.act_learn(batch_station,batch_actions,batch_reward,batch_next_station,batch_done)
 
 
-
-
-    hp_station = cv2.cvtColor(cv2.resize(grab_screen(window_size),(HP_WIDTH,HP_HEIGHT)),cv2.COLOR_BGR2GRAY)
-
-    boss_hp_value = boss_hp(hp_station, 570)
-    boss_last_hp = boss_hp_value
-    self_hp = player_hp(hp_station)
-    min_hp = 9
-
+    
 
     step = 0
     done = 0
     total_reward = 0
 
-
-    # start_time = time.time()
+    start_time = time.time()
     # Deley Reward
     DeleyReward = collections.deque(maxlen=DELEY_REWARD)
-    DeleyStation = collections.deque(maxlen=DELEY_REWARD)
+    DeleyStation = collections.deque(maxlen=DELEY_REWARD + 1) # 1 more for next_station
     DeleyActions = collections.deque(maxlen=DELEY_REWARD)
     DeleyDirection = collections.deque(maxlen=DELEY_REWARD)
     
@@ -94,58 +86,41 @@ def run_episode(algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
     # move direction of player 0 for stay, 1 for left, 2 for right
     while True:
         
-        # player hp bar is not in normal state and the left pixels are not black
-        if(hp_station[40][95] != 56 and hp_station[300][30] > 20 and hp_station[200][30] > 20):
-            # print("Not in game yet 1")
-            hp_station = cv2.cvtColor(cv2.resize(grab_screen(window_size),(HP_WIDTH,HP_HEIGHT)),cv2.COLOR_BGR2GRAY)
-            continue
-        
-        # there is not boss hp bar
-        if hp_station[401][98] != 0 and hp_station[401][98] == 0:
-            # print("Not in game yet 2")
-            hp_station = cv2.cvtColor(cv2.resize(grab_screen(window_size),(HP_WIDTH,HP_HEIGHT)),cv2.COLOR_BGR2GRAY)
-            continue
-
+        start_time = time.time()
+        step += 1
         # last_time = time.time()
         # no more than 10 mins
         # if time.time() - start_time > 600:
         #     break
+
+        # in case of do not collect enough frames
         while(len(thread1.buffer) < FRAMEBUFFERSIZE):
-            print(len(thread1.buffer))
             time.sleep(0.1)
+        
         stations = thread1.get_buffer()
+        boss_hp_value = hp.get_boss_hp()
+        self_hp = hp.get_self_hp()
 
-        d = agent.move_sample(stations)
-        action = agent.act_sample(stations)
-        step += 1
+        move, action = agent.sample(stations)
 
-        # print("Move:", move_name[d] )
-        # thread2 = TackAction(2, "ActionThread", d, action)
-        # thread2.start()
-        take_direction(d)
+        take_direction(move)
         take_action(action)
+        
+        
+        next_station = thread1.get_buffer()
 
-
-        next_station = cv2.resize(cv2.cvtColor(grab_screen(station_size), cv2.COLOR_RGBA2RGB),(WIDTH,HEIGHT))
-        next_hp_station = cv2.cvtColor(cv2.resize(grab_screen(window_size),(HP_WIDTH,HP_HEIGHT)),cv2.COLOR_BGR2GRAY)
-
-        next_boss_hp_value = boss_hp(next_hp_station, boss_last_hp)
-        boss_last_hp = boss_hp_value
-        next_self_hp = player_hp(next_hp_station)
-
-        if min_hp == 9 and next_self_hp == 1:
-            next_self_hp = 9
-
-        reward, done, min_hp = Tool.Helper.action_judge(boss_hp_value, next_boss_hp_value,self_hp, next_self_hp, min_hp)
+        next_boss_hp_value = hp.get_boss_hp()
+        next_self_hp = hp.get_self_hp()
+        
+        # get reward
+        reward, done = Tool.Helper.action_judge(boss_hp_value, next_boss_hp_value,self_hp, next_self_hp)
             # print(reward)
         # print( action_name[action], ", ", move_name[d], ", ", reward)
-
+        
         DeleyReward.append(reward)
         DeleyStation.append(stations)
         DeleyActions.append(action)
-        DeleyDirection.append(d)
-
-        # print(mean(DeleyReward))
+        DeleyDirection.append(move)
 
 
         if len(DeleyReward) >= DELEY_REWARD:
@@ -175,7 +150,9 @@ def run_episode(algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
 
 
     thread1.stop()
-    for i in range(2):
+
+    # learn while loading
+    for i in range(4):
         if (len(move_rmp) > MEMORY_WARMUP_SIZE):
             # print("move learning")
             batch_station,batch_moveions,batch_reward,batch_next_station,batch_done = move_rmp.sample(BATCH_SIZE)
@@ -193,7 +170,6 @@ if __name__ == '__main__':
 
     # In case of out of memory
     config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
-    config.gpu_options.allow_growth = True
     config.gpu_options.allow_growth = True      #程序按需申请内存
     sess = tf.compat.v1.Session(config = config)
 
@@ -204,11 +180,15 @@ if __name__ == '__main__':
     
     # new model, if exit save file, load it
     model = Model(INPUT_SHAPE, ACTION_DIM)  
-    if os.path.exists('./model/act_model.h5'):
+
+    # Hp counter
+    hp = Hp_getter()
+
+    if os.path.exists("./model/shared_model.h5"):
         print("model exists , load model\n")
         model.load_model()
     algorithm = DQN(model, gamma=GAMMA, learnging_rate=LEARNING_RATE)
-    agent = Agent(ACTION_DIM,algorithm,e_greed=0.5,e_greed_decrement=1e-5)
+    agent = Agent(ACTION_DIM,algorithm,e_greed=0.6,e_greed_decrement=1e-6)
     
     # get user input, no need anymore
     # user = User()
@@ -224,10 +204,10 @@ if __name__ == '__main__':
     while episode < max_episode:    # 训练max_episode个回合，test部分不计算入episode数量
         # 训练
         episode += 1     
-        if episode % 10 == 1:
-            algorithm.replace_target()
+        # if episode % 20 == 1:
+        #     algorithm.replace_target()
 
-        total_reward, total_step, PASS_COUNT = run_episode(algorithm,agent,act_rmp, move_rmp, PASS_COUNT, paused)
+        total_reward, total_step, PASS_COUNT = run_episode(hp, algorithm,agent,act_rmp, move_rmp, PASS_COUNT, paused)
 
         if episode % 10 == 1:
             model.save_mode()
