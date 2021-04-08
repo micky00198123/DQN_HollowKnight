@@ -54,7 +54,6 @@ DELEY_REWARD = 2
 
 def run_episode(hp, algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
     restart()
-    
     # learn while load game
     for i in range(3):
         if (len(move_rmp) > MEMORY_WARMUP_SIZE):
@@ -69,7 +68,6 @@ def run_episode(hp, algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
 
 
     
-
     step = 0
     done = 0
     total_reward = 0
@@ -81,11 +79,17 @@ def run_episode(hp, algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
     DeleyActions = collections.deque(maxlen=DELEY_REWARD)
     DeleyDirection = collections.deque(maxlen=DELEY_REWARD)
     
+    while True:
+        boss_hp_value = hp.get_boss_hp()
+        if boss_hp_value <= 900 and boss_hp_value >= 0:
+            break
+        
+
     thread1 = FrameBuffer(1, "FrameBuffer", WIDTH, HEIGHT, maxlen=FRAMEBUFFERSIZE)
     thread1.start()
-    # move direction of player 0 for stay, 1 for left, 2 for right
+
+
     while True:
-        
         start_time = time.time()
         step += 1
         # last_time = time.time()
@@ -123,7 +127,7 @@ def run_episode(hp, algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
         DeleyDirection.append(move)
 
 
-        if len(DeleyReward) >= DELEY_REWARD:
+        if len(DeleyReward) >= DELEY_REWARD and mean(DeleyReward) != 0:
             move_rmp.append((DeleyStation[0],DeleyDirection[0],mean(DeleyReward),DeleyStation[1],done))
             act_rmp.append((DeleyStation[0],DeleyActions[0],mean(DeleyReward),DeleyStation[1],done))
 

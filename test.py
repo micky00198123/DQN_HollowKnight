@@ -78,12 +78,12 @@ import os
 # min_hp = 9
 
 # check_point = (612, 187)
-# start_time = time.time()
+# # start_time = time.time()
 
 h = Hp_getter()
 
 while True:
-    print(h.get_play_location())
+    print(h.get_self_hp())
     # hp_station = cv2.cvtColor(cv2.resize(grab_screen(station_size),(WIDTH,HEIGHT)),cv2.COLOR_RGBA2RGB)
     # fn = "./test_img/" + str(i) + ".png"
     # cv2.imwrite(fn, hp_station)
