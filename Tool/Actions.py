@@ -139,9 +139,13 @@ def Skill_Down():
 # 6
 def Rush():
     PressKey(L_SHIFT)
-    time.sleep(0.15)
+    time.sleep(0.1)
     ReleaseKey(L_SHIFT)
-    time.sleep(0.05)
+    PressKey(X)
+    time.sleep(0.03)
+    ReleaseKey(X)
+    time.sleep(0.02)
+    
 
 
 
@@ -177,6 +181,9 @@ def restart():
     while True:
         station = cv2.resize(cv2.cvtColor(grab_screen(station_size), cv2.COLOR_RGBA2RGB),(1000,500))
         if station[187][612][0] > 200: 
+            # PressKey(DOWN_ARROW)
+            # time.sleep(0.1)
+            # ReleaseKey(DOWN_ARROW)
             PressKey(C)
             time.sleep(0.1)
             ReleaseKey(C)

@@ -90,7 +90,7 @@ def run_episode(hp, algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
     thread1 = FrameBuffer(1, "FrameBuffer", WIDTH, HEIGHT, maxlen=FRAMEBUFFERSIZE)
     thread1.start()
 
-
+    last_hornet_y = 0
     while True:
         step += 1
         # last_time = time.time()
@@ -120,12 +120,14 @@ def run_episode(hp, algorithm,agent,act_rmp,move_rmp,PASS_COUNT,paused):
         next_self_hp = hp.get_self_hp()
         next_player_x, next_player_y = hp.get_play_location()
         next_hornet_x, next_hornet_y = hp.get_hornet_location()
-
-
+        hornet_skill1 = False
+        if last_hornet_y > 32 and last_hornet_y < 32.5 and hornet_y > 32 and hornet_y < 32.5:
+            hornet_skill1 = True
+        last_hornet_y = hornet_y
         # get reward
-        move_reward = Tool.Helper.move_judge(self_hp, next_self_hp, player_x, next_player_x, hornet_x, next_hornet_x, move)
+        move_reward = Tool.Helper.move_judge(self_hp, next_self_hp, player_x, next_player_x, hornet_x, next_hornet_x, move, hornet_skill1)
 
-        act_reward, done = Tool.Helper.action_judge(boss_hp_value, next_boss_hp_value,self_hp, next_self_hp, next_player_x, next_hornet_x, action)
+        act_reward, done = Tool.Helper.action_judge(boss_hp_value, next_boss_hp_value,self_hp, next_self_hp, next_player_x, next_hornet_x, action, hornet_skill1)
             # print(reward)
         # print( action_name[action], ", ", move_name[d], ", ", reward)
         
@@ -201,7 +203,7 @@ if __name__ == '__main__':
 
     model.load_model()
     algorithm = DQN(model, gamma=GAMMA, learnging_rate=LEARNING_RATE)
-    agent = Agent(ACTION_DIM,algorithm,e_greed=0.6,e_greed_decrement=1e-6)
+    agent = Agent(ACTION_DIM,algorithm,e_greed=0.1,e_greed_decrement=1e-6)
     
     # get user input, no need anymore
     # user = User()
